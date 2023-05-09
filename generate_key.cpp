@@ -8,6 +8,7 @@
 #include <cryptopp/oids.h>
 #include <cryptopp/sha.h>
 
+
 using namespace CryptoPP;
 using namespace CryptoPP::ASN1;
 
@@ -15,9 +16,7 @@ int main(int argc, char* argv[]) {
     AutoSeededRandomPool prng;
 
     // Đường cong elliptic
-    OID curve = secp256k1();
-    DL_GroupParameters_EC<ECP> params(curve);
-    const ECP::Point& generator = params.GetSubgroupGenerator();
+    DL_GroupParameters_EC<ECP> params(secp256r1());
 
     // Tạo private key
     ECDSA<ECP, SHA256>::PrivateKey privateKey;
@@ -27,40 +26,53 @@ int main(int argc, char* argv[]) {
     ECDSA<ECP, SHA256>::PublicKey publicKey;
     privateKey.MakePublicKey(publicKey);
 
-    // Lưu private key
-    ByteQueue privateKeyBytes;
-    privateKey.Save(privateKeyBytes);
+    // Save private key in PKCS #8 format
+    FileSink pri_key( "private.ec.key", true /*binary*/ );
+    privateKey.Save( pri_key );
 
-    FileSink privateKeyFile("private_key.ber");
-    privateKeyBytes.CopyTo(privateKeyFile);
-    privateKeyFile.MessageEnd();
+    // Save public key in X.509 format
+    FileSink pub_key( "public.ec.key", true /*binary*/ );
+    publicKey.Save( pub_key );
 
-    // Lưu public key
-    ByteQueue publicKeyBytes;
-    publicKey.Save(publicKeyBytes);
+     // Load message from file
+    std::ifstream messageFile("message.txt");
+    if (!messageFile) {
+        std::cerr << "Error: Can't open message.txt." << std::endl;
+        return 1;
+    }
+    std::string message((std::istreambuf_iterator<char>(messageFile)),
+                         std::istreambuf_iterator<char>());
 
-    FileSink publicKeyFile("public_key.ber");
-    publicKeyBytes.CopyTo(publicKeyFile);
-    publicKeyFile.MessageEnd();
-
-    // Đọc nội dung tin nhắn từ file
-    std::string message;
-    FileSource("message.txt", true, new StringSink(message));
-
-    // Tạo chữ ký từ tin nhắn và khóa bí mật
-    std::string signature;
+    // Tạo chữ ký
     ECDSA<ECP, SHA256>::Signer signer(privateKey);
-    StringSource(message, true,
+    std::string signature;
+    StringSource ss(message, true, 
         new SignerFilter(prng, signer,
             new StringSink(signature)
         )
     );
-
     // Lưu chữ ký vào file
-    HexEncoder signatureEncoder(new FileSink("signature.txt"));
-    signatureEncoder.Put((byte const*)signature.data(), signature.size());
-    signatureEncoder.MessageEnd();
+    std::ofstream sigFile("signature.txt", std::ios::binary);
+    if (!sigFile) {
+        std::cerr << "Error: Can't open signature.txt." << std::endl;
+        return 1;
+    }
+    sigFile.write(signature.data(), signature.size());
+    sigFile.close();
+    std::cout << std::endl << "Message signed successfully." << std::endl;
 
-    std::cout << "Đã tạo private key, public key và chữ ký, và lưu vào các file tương ứng." << std::endl;
+   privateKey.MakePublicKey( publicKey );
+
+    bool result_PLK = publicKey.Validate( prng, 3 );
+    if(result_PLK) {
+        std::cout << "Public key hop le!";
+    }
+    else std::cout << "Public key KHONG hop le!";
+    bool result_PRK = publicKey.Validate( prng, 3 );
+    if(result_PRK) {
+        std::cout << "Private key hop le!" << std::endl;
+    }
+    else std::cout << "Private key KHONG hop le!" << std::endl;
+    std::cout << "message: " << message ;
     return 0;
 }
