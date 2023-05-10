@@ -1,3 +1,4 @@
+//verify.cpp
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -43,21 +44,29 @@ int main(int argc, char* argv[]) {
 
     // Verify signature
     ECDSA<ECP, SHA256>::Verifier verifier(publicKey);
+    bool result;
+    auto start_time = std::chrono::high_resolution_clock::now();
     
+    for (int i = 0; i < 100; i++)
+    {
+        result = false;
+        StringSource ss(signature+message, true,
+                        new SignatureVerificationFilter(verifier, 
+                            new ArraySink( (byte*)&result, sizeof(result) )
+                            )
+                        );
+    }
+    auto end_time = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
 
-    bool result = false;
-
-    StringSource ss(signature+message, true /*pump all*/,
-    new SignatureVerificationFilter(
-        verifier,
-        new ArraySink( (byte*)&result, sizeof(result) )
-    ) // SignatureVerificationFilter
-);
     if (result) {
         std::cout << "Signature verification succeeded." << std::endl;
     } else {
         std::cout << "Signature verification failed." << std::endl;
     }  
     std::cout << "message: " << message ;
+
+    std::cout << "\n\nTotal time for 100 rounds: " << duration.count() * 1.0 / 1000 << " ms" << std::endl;
+    std::cout << "Average time for 100 rounds :" << (duration.count() * 1.0 / 1000) / 100 << " ms" << std::endl;
     return 0;
 }

@@ -1,1 +1,1 @@
-Hoàng Anh Khoa
+Công nghệ ngày càng phát triển, đặc biệt là trong lĩnh vực truyền thông và thông tin. Các thiết bị di động ngày càng thông minh hơn, các ứng dụng truyền thông cũng ngày càng đa dạng và tiện ích hơn. Tuy nhiên, với những lợi ích đó cũng đến với những rủi ro về an ninh thông tin. Vì vậy, việc áp dụng các giải pháp bảo mật thông tin như RSA là rất cần thiết để đảm bảo an toàn cho các thông tin quan trọng.
